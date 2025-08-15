@@ -1,5 +1,5 @@
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open('fcache-v2').then(cache => cache.addAll([
+  e.waitUntil(caches.open('fcache-c2').then(cache => cache.addAll([
     './',
     './index.html',
     './app.js',
@@ -20,7 +20,7 @@ self.addEventListener('fetch', (e) => {
     caches.match(e.request).then(res => {
       const fetchPromise = fetch(e.request).then(networkRes => {
         if(networkRes && networkRes.status===200 && url.origin===location.origin){
-          caches.open('fcache-v1').then(cache => cache.put(e.request, networkRes.clone()));
+          caches.open('fcache-v2').then(cache => cache.put(e.request, networkRes.clone()));
         }
         return networkRes;
       }).catch(()=>res);
