@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flashcards PWA</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0ea5e9">
+  <link rel="icon" href="assets/icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="assets/icons/icon-512.png">
+  <style>
+    /* Minimal CSS reset + variables */
+    :root { --bg:#0b1220; --card:#111827; --text:#e5e7eb; --muted:#9ca3af; --brand:#0ea5e9; --ok:#22c55e; --mid:#f59e0b; --bad:#ef4444; }
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:linear-gradient(180deg,#0b1220,#0f172a 40%);color:var(--text)}
+    .container{max-width:900px;margin:0 auto;padding:16px 16px 80px}
+    header{display:flex;align-items:center;gap:12px;justify-content:space-between;margin:8px 0 16px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#22c55e)}
+    h1{font-size:18px;margin:0}
+    .stats{display:flex;gap:10px;align-items:center}
+    .chip{background:#0f172a;border:1px solid #1f2937;color:var(--muted);border-radius:999px;padding:6px 10px;font-size:12px}
+    nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    nav button{background:#0f172a;border:1px solid #1f2937;color:#cbd5e1;border-radius:10px;padding:8px 10px;cursor:pointer}
+    nav button.active{border-color:var(--brand);color:#fff}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}
+    .toolbar select,.toolbar button{background:#0f172a;border:1px solid #1f2937;color:#cbd5e1;border-radius:10px;padding:8px 10px;cursor:pointer}
+    .card{background:linear-gradient(180deg,#0f172a,#0b1220);border:1px solid #1f2937;border-radius:16px;padding:20px;min-height:180px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+    .term{font-size:26px;font-weight:700;margin:6px 0}
+    .definition{font-size:16px;color:#d1d5db}
+    .meta{font-size:12px;color:var(--muted);margin-top:8px}
+    .actions{display:flex;gap:10px;justify-content:center;margin-top:14px}
+    .btn{border:1px solid #1f2937;background:#0f172a;color:#cbd5e1;border-radius:10px;padding:10px 12px;cursor:pointer}
+    .btn.ok{border-color:#14532d;color:#dcfce7}
+    .btn.mid{border-color:#593a0b;color:#fffbeb}
+    .btn.bad{border-color:#7f1d1d;color:#fee2e2}
+    .hidden{display:none}
+    .list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+    .tile{background:#0f172a;border:1px solid #1f2937;border-radius:12px;padding:12px}
+    .tile h3{margin:0 0 4px;font-size:15px}
+    .small{font-size:12px;color:var(--muted)}
+    footer{position:fixed;bottom:0;left:0;right:0;background:#0b1220;border-top:1px solid #1f2937}
+    .footerbar{max-width:900px;margin:0 auto;padding:8px 16px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+    .footerbar .badge{background:#0f172a;border:1px solid #1f2937;border-radius:999px;padding:6px 10px;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand"><div class="logo"></div><h1>Flashcards</h1></div>
+      <div class="stats">
+        <span class="chip" id="chip-due">Fällig: 0</span>
+        <span class="chip" id="chip-done">Heute erledigt: 0</span>
+        <span class="chip" id="chip-coins">Münzen: 0</span>
+      </div>
+    </header>
+
+    <nav>
+      <button data-tab="learn" class="active">Lernen</button>
+      <button data-tab="browse">Nachschlagen</button>
+      <button data-tab="challenges">Challenges</button>
+      <button data-tab="rewards">Belohnungen</button>
+      <button data-tab="stats">Statistik</button>
+    </nav>
+
+    <div class="toolbar">
+      <select id="levelFilter">
+        <option value="all">Alle Level</option>
+        <option value="starter">Starter</option>
+        <option value="challenger">Challenger</option>
+        <option value="master">Master</option>
+      </select>
+      <button id="newSession">Neue Sitzung</button>
+      <button id="exportProgress">Aktuellen Stand exportieren (CSV)</button>
+    </div>
+
+    <!-- Tabs -->
+    <section id="tab-learn">
+      <div class="card" id="flashcard">
+        <div class="term" id="term">–</div>
+        <div class="definition hidden" id="definition">–</div>
+        <div class="meta" id="meta">–</div>
+        <div class="actions">
+          <button class="btn" id="flip">Umdrehen</button>
+          <button class="btn ok" id="btn-ok">Gewusst</button>
+          <button class="btn mid" id="btn-mid">Unsicher</button>
+          <button class="btn bad" id="btn-bad">Falsch</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-browse" class="hidden">
+      <input id="search" placeholder="Suchen…" style="width:100%;padding:10px;border-radius:10px;border:1px solid #1f2937;background:#0f172a;color:#cbd5e1;margin:8px 0;">
+      <div class="list" id="termList"></div>
+    </section>
+
+    <section id="tab-challenges" class="hidden">
+      <div class="list" id="challengeList"></div>
+    </section>
+
+    <section id="tab-rewards" class="hidden">
+      <div class="list" id="rewardList"></div>
+    </section>
+
+    <section id="tab-stats" class="hidden">
+      <div class="tile">
+        <h3>Letzte 7 Tage</h3>
+        <div class="small" id="stats7">–</div>
+      </div>
+      <div class="tile">
+        <h3>Level-Fortschritt</h3>
+        <div class="small" id="levelProgress">–</div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <div class="footerbar">
+      <div>Installierbar: Menü → „Zum Startbildschirm hinzufügen“</div>
+      <div class="badge">PWA Offline‑fähig</div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
